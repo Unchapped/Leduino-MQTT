@@ -35,17 +35,12 @@ void LedControllerClass::queueKeyframe(Keyframe &kf) {
             _prev[i] = _state[i];
             _next[i] = kf.channel[i];
             _interp_ctr = 0;
-            _interp_max = kf.delay << KF_TO_REFRESH_LSHIFT; //shift the keyframe up into 32 bit timing space
-            _next_id = kf.next_id;
+            _interp_max = kf.delay;
         } else {
           _interp_ctr = _interp_max = 0; //disable interpolation
           _state[i] = _next[i] = kf.channel[i];
         }
     }   
-}
-
-KfPtr LedControllerClass::nextKeyframe() {
-  return _next_id;
 }
 
 /*
@@ -56,9 +51,7 @@ which can be approximated by simply taking the high byte of the sum.
 void LedControllerClass::poll() {
     //update interpolation to next keyframe
     if(_rate.ready()){
-        if(_playing) {
-            _interp_ctr++;
-        }
+        _interp_ctr++;
         uint8_t _interp_pct = map(_interp_ctr, 0, _interp_max, 0, 0xff); 
         for(int i = 0; i < NUMCHANNELS; i++){ 
             if(done()) { //interpolation done
@@ -85,9 +78,6 @@ bool LedControllerClass::done() {
 
 void LedControllerClass::power(bool pwr) {
     _power = pwr;
-}
-void LedControllerClass::play(bool play){
-    _playing = play;
 }
 
 void LedControllerClass::reset() {
