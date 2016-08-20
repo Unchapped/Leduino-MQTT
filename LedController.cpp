@@ -1,10 +1,14 @@
 #include <Arduino.h>
 #include "LedController.h"
-#include <avr/pgmspace.h>
+
 
 //use this 8bit->12bit Gamma map has slightly better dynamic range
 //source: https://learn.adafruit.com/led-tricks-gamma-correction/the-longer-fix
+#ifdef ESP8266
+const uint16_t gamma_16[] = { 
+#else
 const uint16_t PROGMEM gamma_16[] = { 
+#endif
      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   1,   1,   1,   1,   1,
      2,   2,   2,   3,   3,   4,   4,   5,   5,   6,   7,   8,   8,   9,  10,  11,
     12,  13,  15,  16,  17,  18,  20,  21,  23,  25,  26,  28,  30,  32,  34,  36,
@@ -21,11 +25,19 @@ const uint16_t PROGMEM gamma_16[] = {
   2315,2346,2378,2410,2442,2474,2507,2540,2573,2606,2640,2674,2708,2743,2778,2813,
   2849,2884,2920,2957,2993,3030,3067,3105,3143,3181,3219,3258,3297,3336,3376,3416,
   3456,3496,3537,3578,3619,3661,3703,3745,3788,3831,3874,3918,3962,4006,4050,4095 };
+
+#ifdef ESP8266
+inline uint16_t gamma(uint8_t val) {return gamma_16[val];}
+#else
 inline uint16_t gamma(uint8_t val) {return pgm_read_word(&gamma_16[val]);}
+#endif
+
 
 void LedControllerClass::init() {
-    _pwm.begin();
+    #ifdef TWBR
     TWBR = 12; // set I2C to 400KHz
+    #endif
+    _pwm.begin();
     reset();
 }
 
@@ -43,27 +55,33 @@ void LedControllerClass::queueKeyframe(Keyframe &kf) {
     }   
 }
 
-/*
-The value you are looking for is (A*(255-x)+B*x)/255. It requires only 8x8 multiplication, and a final division by 255,
-which can be approximated by simply taking the high byte of the sum.
-*/
+//Sets one channel immediately, while allowing all others to continue interpolating
+void LedControllerClass::setChannel(uint8_t index, Channel value){
+  _prev[index] = _state[index] = _next[index] = value;
+}
+
+const Channel* LedControllerClass::getState(){
+  return (const Channel*) _state;
+}
 
 void LedControllerClass::poll() {
     //update interpolation to next keyframe
     if(_rate.ready()){
         _interp_ctr++;
         uint8_t _interp_pct = map(_interp_ctr, 0, _interp_max, 0, 0xff); 
-        for(int i = 0; i < NUMCHANNELS; i++){ 
+        for(int i = 0; i < NUMCHANNELS; i++){
             if(done()) { //interpolation done
                 _interp_ctr = _interp_max = 0; //disable interpolation
                 _state[i] = _next[i]; //clamp state to expected final value
             }else{
+                //Interpolation is (A*(255-x)+B*x)/255. It requires only 8x8 multiplication, and a final division by 255,
+                //which can be approximated by simply taking the high byte of the sum.
                 _state[i] = ((_prev[i] * (uint16_t) (0xff-_interp_pct)) + (_next[i] * (uint16_t) _interp_pct)) >> 8;
             }
 
             //refresh output:
             if(_power) {
-                uint16_t gval = gamma(_state[i]); //todo: test this
+                uint16_t gval = gamma(_state[i]);
                 _pwm.setPWM(i, 0, gval);
             } else {
                 _pwm.setPWM(i, 0, 0);
