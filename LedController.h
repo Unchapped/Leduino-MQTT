@@ -33,7 +33,7 @@ class LedControllerClass{
     Adafruit_PWMServoDriver _pwm; 
 
     //State variables
-    bool _power = true;
+    bool _power;
     //Channel _state[NUMCHANNELS]; see hacky public below.
 
     //interpolation variables
@@ -43,14 +43,14 @@ class LedControllerClass{
     Channel _state[NUMCHANNELS]; //todo: make proper getter for this and make it private.
 
     public:
-    LedControllerClass(uint8_t addr = 0x40) : _rate(REFRESH_MICROS), _pwm(addr) {};
+    LedControllerClass(uint8_t addr = 0x40) : _rate(REFRESH_MICROS), _pwm(addr), _power(true) {};
     void init();
     void reset();
     void power(bool pwr);
     void poll();
     void queueKeyframe(Keyframe &kf);
     void setChannel(uint8_t index, Channel value);
-    const Channel* getState();
+    Channel getState(uint8_t index);
     bool done();
 };
 

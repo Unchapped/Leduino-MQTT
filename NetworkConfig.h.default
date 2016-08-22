@@ -1,0 +1,12 @@
+#ifndef NETWORKCONFIG_H
+#define NETWORKCONFIG_H
+//TODO: Save this file as NetworkConfig.h in your sketch directory, with your settings
+
+#define WIFI_SSID "MyWifiNetwork"
+#define WIFI_PASSWD "MyPassword"
+
+#define MQTT_NODE_ID '0'
+#define MQTT_SERVER "mqtt.local"
+#define MQTT_PORT 1883
+
+#endif /* MQTTCLIENT_H */

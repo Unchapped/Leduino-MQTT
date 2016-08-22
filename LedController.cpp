@@ -60,23 +60,29 @@ void LedControllerClass::setChannel(uint8_t index, Channel value){
   _prev[index] = _state[index] = _next[index] = value;
 }
 
-const Channel* LedControllerClass::getState(){
-  return (const Channel*) _state;
+Channel LedControllerClass::getState(uint8_t index){
+  return _state[index];
 }
 
 void LedControllerClass::poll() {
     //update interpolation to next keyframe
     if(_rate.ready()){
-        _interp_ctr++;
-        uint8_t _interp_pct = map(_interp_ctr, 0, _interp_max, 0, 0xff); 
+        if(_interp_ctr < _interp_max) _interp_ctr++; //!done
+        #ifndef ESP8266
+        uint8_t _interp_pct = map(_interp_ctr, 0, _interp_max, 0, 0xff); //use 8 bit math tricks
+        #endif
         for(int i = 0; i < NUMCHANNELS; i++){
             if(done()) { //interpolation done
-                _interp_ctr = _interp_max = 0; //disable interpolation
                 _state[i] = _next[i]; //clamp state to expected final value
             }else{
+                #ifdef ESP8266
+                _state[i] = ((_prev[i] * (_interp_max - _interp_ctr)) + (_next[i] * _interp_ctr)) / _interp_max; //use 32 bit math
+                #else
+                //use 8 bit math
                 //Interpolation is (A*(255-x)+B*x)/255. It requires only 8x8 multiplication, and a final division by 255,
                 //which can be approximated by simply taking the high byte of the sum.
                 _state[i] = ((_prev[i] * (uint16_t) (0xff-_interp_pct)) + (_next[i] * (uint16_t) _interp_pct)) >> 8;
+                #endif
             }
 
             //refresh output:
