@@ -35,6 +35,29 @@ static size_t _tokenize_in_place(char * buffer, char limiter){
   return offset;
 }
 
+//keyframe syntax parser helper function
+//expects"[delay(float)]:channel 0 [int], channel 1 [int], ..."
+static void _parse_keyframe(char * message, unsigned int length){
+      Keyframe _kfBuf; //internal Keyframe buffer
+      char * token = message;
+      size_t len = _tokenize_in_place(token, ':');
+      float f_delay = atof(token);
+      _kfBuf.delay = f_delay * REFRESH_HERTZ; //convert to ticks, implicit cast to uint32_t
+      token += len + 1; //next chunk will be past the null    
+      //parse channels
+      int ch_id = 0;
+      while (ch_id < NUMCHANNELS){
+        len = _tokenize_in_place(token, ',');
+        if(len != 0){
+          _kfBuf.channel[ch_id++] = atoi(token);
+          token += len + 1; //next chunk will be past the null
+        }else{
+          _kfBuf.channel[ch_id++] = 0;
+        }
+      }
+      LedController.queueKeyframe(_kfBuf);
+}
+
 #ifdef TICKER_H
 MQTTClientClass::MQTTClientClass() : _client(MQTT_SERVER, MQTT_PORT, _MQTTClient_recv_cb , _netClient) {
 #else
@@ -45,41 +68,34 @@ MQTTClientClass::MQTTClientClass() : _client(MQTT_SERVER, MQTT_PORT, _MQTTClient
 }
 
 boolean MQTTClientClass::_publish_buffers() {
-  _client.publish(this->_topic_buffer, this->_message_buffer);
+  _client.publish(this->_topic_buffer_secret, this->_message_buffer);
 }
+
+
 
 void MQTTClientClass::_callback(char* topic, byte* payload, unsigned int length) {
   //cache the topic name and payload, since they are changed by any publish calls
-  char topic_name[16]; //HACK: fixed-length buffer!
-  strcpy(topic_name, topic + strlen(MQTT_TOPIC_PREFIX)); 
+  char topic_name[MQTT_MAX_TOPIC_LEN]; //HACK: check this!
+  strcpy(topic_name, topic + strlen(MQTT_TOPIC_NAMESPACE) + 4); //leduino + "/ID/" 
 
   char message[length + 1];
   strncpy(message, (char *) payload, length);
   message[length] = 0; //enforce null termination
 
-  if(topic_name[0] == 'p') { //power
-    LedController.power(atoi(message)); //set power off/on
-    return;
-  } else { //queue keyframe expects"[delay(float)]:channel 0 [int], channel 1 [int], ..."
-    char * token = message;
-    size_t len = _tokenize_in_place(token, ':');
-    float f_delay = atof(token);
-    _kfBuf.delay = f_delay * REFRESH_HERTZ; //convert to ticks, implicit cast to uint32_t
-    token += len + 1; //next chunk will be past the null    
-    //parse channels
-    int ch_id = 0;
-    while (ch_id < NUMCHANNELS){
-      len = _tokenize_in_place(token, ',');
-      _kfBuf.channel[ch_id++] = atoi(token);
-      if(len != 0){
-        token += len + 1; //next chunk will be past the null
-      }else{
-        break;
-      }
+  switch(topic_name[0]){
+    case 'p': //set power off/on
+      LedController.power(atoi(message));
+      return;
+    case 'c': //set channel immediately
+      LedController.setChannel(atoi(topic_name + 8), atoi(message)); // 8 = strlen("channel/")
+      return;
+    case 'q': //queue keyframe expects"[delay(float)]:channel 0 [int], channel 1 [int], ..."
+      _parse_keyframe(message, length);
+      return;
     }
-    LedController.queueKeyframe(_kfBuf);
-  }
 }
+
+
 
 void MQTTClientClass::init(){
   #ifdef ESP8266
@@ -125,28 +141,15 @@ void MQTTClientClass::poll(){
 }
 
 void MQTTClientClass::report_status(){
-  /* TODO: fix this!
-  sprintf ( topic_id_buf, "%u", i);
-  char message_buf[] = "000";
-  sprintf ( message_buf, "%u", LedController.power());
-  _client.publish(topic_buf, message_buf); //publish power state
-
+  sprintf(_topic_buffer, "%s", "status");
+  uint8_t buf_len = NUMCHANNELS * 4;
+  char buffer[buf_len];
+  char * bPtr = buffer;
   for(int i = 0; i < NUMCHANNELS; i++){
-    sprintf ( topic_id_buf, "%u", i);
-    sprintf ( message_buf, "%03u", LedController.getState(i));
-    _client.publish(topic_buf, message_buf);
-  } */
-  /*
-  char buffer[NUMCHANNELS * 4 + 1];
-  char *bPtr = buffer;
-  for(int i = 0; i < NUMCHANNELS; i++){
-    bPtr += sprintf ( bPtr, "%03u,", LedController.getState(i)); //back off the null terminator
+    bPtr += sprintf ( bPtr, "%03u,", LedController.getState(i));
   }
-  bPtr--;
-  *bPtr = '\0'; //null terminate the last comma
-  _client.publish("home/leduino/0/status", buffer);
-  */
-  //_client.loop();
+  buffer[buf_len - 1] = 0; //null terminate the last comma
+  _client.publish(_topic_buffer_secret, buffer);
 }
 
 //Callback redirect functions

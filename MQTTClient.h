@@ -31,14 +31,12 @@ leduino/ID/announce //online/LWT messages. either "up" or "down"
 #define MQTT_NODE_ID 0
 #define MQTT_MAX_TOPIC_LEN 32
 #define MQTT_TOPIC_NAMESPACE "leduino"
-#define MQTT_TOPIC_PREFIX "leduino/ID/"
 #define MQTT_MAX_MSG_LEN MQTT_MAX_PACKET_SIZE - (MQTT_MAX_TOPIC_LEN + 7)
-#define MQTT_STATUS_MILLIS 500
+#define MQTT_STATUS_MILLIS 1000
 
 
 
 class MQTTClientClass{
-    Keyframe _kfBuf; //internal Keyframe buffer
     char _topic_buffer_secret[MQTT_MAX_TOPIC_LEN]; //internal topic name buffer
     char * _topic_buffer;
     char _message_buffer[MQTT_MAX_MSG_LEN]; //internal message buffer

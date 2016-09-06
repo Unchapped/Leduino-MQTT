@@ -30,10 +30,11 @@ void setup() {
   LedController.init();
   MQTTClient.init();
 
-  /* DEBUG: turn on a channel for debugging. */
+  /* DEBUG: turn on a channel for debugging. * /
   kfBuf.delay = REFRESH_HERTZ;
   kfBuf.channel[0] = 255;
   LedController.queueKeyframe(kfBuf);
+  */
 }
 
 void loop() {

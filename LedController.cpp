@@ -67,6 +67,7 @@ void LedControllerClass::queueKeyframe(Keyframe &kf) {
 
 //Sets one channel immediately, while allowing all others to continue interpolating
 void LedControllerClass::setChannel(uint8_t index, Channel value){
+  if(index >= NUMCHANNELS) return; //overflow
   _prev[index] = _state[index] = _next[index] = value;
 }
 
