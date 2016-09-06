@@ -32,6 +32,12 @@ inline uint16_t gamma(uint8_t val) {return gamma_16[val];}
 inline uint16_t gamma(uint8_t val) {return pgm_read_word(&gamma_16[val]);}
 #endif
 
+#ifdef TICKER_H
+static void _LedController_tick_cb();
+LedControllerClass::LedControllerClass(uint8_t addr) : _pwm(addr), _power(true) {};
+#else
+LedControllerClass::LedControllerClass(uint8_t addr) : _rate(REFRESH_MILLIS), _pwm(addr), _power(true) {};
+#endif
 
 void LedControllerClass::init() {
     #ifdef TWBR
@@ -115,6 +121,10 @@ void LedControllerClass::power(bool pwr) {
     _power = pwr;
 }
 
+bool LedControllerClass::power() {
+    return _power;
+}
+
 void LedControllerClass::reset() {
     _pwm.reset();
     _pwm.setPWMFreq(120);
@@ -127,6 +137,7 @@ void LedControllerClass::reset() {
 //see extern def in header
 LedControllerClass LedController;
 
+//Ticker callback redirect
 #ifdef TICKER_H
 void _LedController_tick_cb(){
   LedController.tick();

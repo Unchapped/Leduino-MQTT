@@ -6,9 +6,8 @@
 #include <Adafruit_PWMServoDriver.h>
 
 //Use the ESP8266 scheduler if available.
-#ifdef NESP8266
+#ifdef ESP8266
 #include <Ticker.h>
-void _LedController_tick_cb();
 #else
 #include <FancyDelay.h>
 #endif
@@ -52,16 +51,12 @@ class LedControllerClass{
     Channel _next[NUMCHANNELS];
     Channel _prev[NUMCHANNELS];
 
-
     public:
-    #ifdef TICKER_H
-    LedControllerClass(uint8_t addr = 0x40) : _pwm(addr), _power(true) {};
-    #else
-    LedControllerClass(uint8_t addr = 0x40) : _rate(REFRESH_MILLIS), _pwm(addr), _power(true) {};
-    #endif
+    LedControllerClass(uint8_t addr = 0x40);
     void init();
     void reset();
     void power(bool pwr);
+    bool power(); //read power state
     void poll(); //use this in the default arduino loop();
     void tick(); //use this if calling from the ESP8266 Scheduler
     void queueKeyframe(Keyframe &kf);

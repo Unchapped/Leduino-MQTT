@@ -2,41 +2,53 @@
 #define MQTTCLIENT_H
 
 #include <PubSubClient.h> 
-#include <FancyDelay.h> 
+ 
 #include "LedController.h"
 #include "NetworkConfig.h"
 
 #ifdef ESP8266
   #include <ESP8266WiFi.h> 
+  #include <Ticker.h>
 #else
+  #include <FancyDelay.h>
   #include <Bridge.h>
   #include <YunClient.h>
 #endif
 
 
 /* MQTT Topics associated with this node
-home/leduino/ID/power //set 1 or 0 for off/on
-home/leduino/ID/queue //enqueue a keyframe Expects "[delay(float)]:channel 0 [int], channel 1 [int], ..."
-home/leduino/ID/channel/INDEX //Instantly set a Channel value 0-255
+leduino/ID/power //set 1 or 0 for off/on
+leduino/ID/queue //enqueue a keyframe Expects "[delay(float)]:channel 0 [int], channel 1 [int], ..."
+leduino/ID/channel/INDEX //Instantly set a Channel value 0-255
 
 publishes:
-home/leduino/ID/num_channels //Latched, NUMCHANNELS
-home/leduino/ID/status //refresh at 2 hz, 0-255 uint8[16] array
-home/leduino/node_announce //online/LWT messages.
+leduino/ID/status //refresh at 2 hz, 0-255 uint8[16] array
+leduino/ID/announce //online/LWT messages. either "up" or "down"
 */
 
 //HACK, fix this:
-#define MQTT_CLIENT_ID "leduino_0"
-#define MQTT_TOPIC_PREFIX "home/leduino/0/"
-#define MQTT_TOPIC_ANNOUNCE "home/leduino/node_announce"
-#define MQTT_ANNOUNCE_MSG "0 up"
-#define MQTT_LWT_MSG "0 down"
+//currently maximum 100 nodes
+#define MQTT_NODE_ID 0
+#define MQTT_MAX_TOPIC_LEN 32
+#define MQTT_TOPIC_NAMESPACE "leduino"
+#define MQTT_TOPIC_PREFIX "leduino/ID/"
+#define MQTT_MAX_MSG_LEN MQTT_MAX_PACKET_SIZE - (MQTT_MAX_TOPIC_LEN + 7)
+#define MQTT_STATUS_MILLIS 500
 
 
 
 class MQTTClientClass{
     Keyframe _kfBuf; //internal Keyframe buffer
+    char _topic_buffer_secret[MQTT_MAX_TOPIC_LEN]; //internal topic name buffer
+    char * _topic_buffer;
+    char _message_buffer[MQTT_MAX_MSG_LEN]; //internal message buffer
+    boolean _publish_buffers(); //publishes the internal message buffer to the internal topic name buffer
+
+    #ifdef TICKER_H
+    Ticker _status_ticker;
+    #else
     FancyDelay _status_rate; //1 Hz report rate
+    #endif
 
     #ifdef ESP8266
     WiFiClient _netClient;
@@ -50,6 +62,7 @@ class MQTTClientClass{
     void init();
     void poll(); //use this in the default arduino loop();
     void tick(); //use this if calling from the ESP8266 Scheduler
+    void report_status(); //publish our state
     void _callback(char* topic, byte* payload, unsigned int length);
 };
 
