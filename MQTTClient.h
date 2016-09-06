@@ -1,14 +1,14 @@
 #ifndef MQTTCLIENT_H
 #define MQTTCLIENT_H
 
-#include <PubSubClient.h>  
+#include <PubSubClient.h> 
+#include <FancyDelay.h> 
 #include "LedController.h"
 #include "NetworkConfig.h"
 
 #ifdef ESP8266
   #include <ESP8266WiFi.h> 
 #else
-  #define LEDPIN 13
   #include <Bridge.h>
   #include <YunClient.h>
 #endif
@@ -48,7 +48,8 @@ class MQTTClientClass{
     public:
     MQTTClientClass();
     void init();
-    void poll();
+    void poll(); //use this in the default arduino loop();
+    void tick(); //use this if calling from the ESP8266 Scheduler
     void _callback(char* topic, byte* payload, unsigned int length);
 };
 

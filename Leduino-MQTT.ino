@@ -4,13 +4,21 @@
 #include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
 #include <PubSubClient.h>  
+
+#ifdef ESP8266
+#include <Ticker.h>
+#define SDA_PIN 4
+#define SCL_PIN 5
+#define LED_PIN 2
+#else
+#define LED_PIN 13
+#endif
+
 #include "LedController.h"
 #include "NetworkConfig.h"
 #include "MQTTClient.h"
 
-#define SDA_PIN 4
-#define SCL_PIN 5
-#define LED_PIN 2
+
 
 
 Keyframe kfBuf;
@@ -22,11 +30,10 @@ void setup() {
   LedController.init();
   MQTTClient.init();
 
-  /* DEBUG: turn on a channel for debugging. * /
+  /* DEBUG: turn on a channel for debugging. */
   kfBuf.delay = REFRESH_HERTZ;
   kfBuf.channel[0] = 255;
   LedController.queueKeyframe(kfBuf);
-  */
 }
 
 void loop() {

@@ -39,6 +39,10 @@ void LedControllerClass::init() {
     #endif
     _pwm.begin();
     reset();
+
+    #ifdef TICKER_H
+    _ticker.attach_ms(REFRESH_MILLIS, _LedController_tick_cb);
+    #endif
 }
 
 void LedControllerClass::queueKeyframe(Keyframe &kf) {
@@ -65,33 +69,40 @@ Channel LedControllerClass::getState(uint8_t index){
 }
 
 void LedControllerClass::poll() {
+    //Use tick() with the ESP8266 instead of poll()
+    #ifndef TICKER_H
     //update interpolation to next keyframe
     if(_rate.ready()){
-        if(_interp_ctr < _interp_max) _interp_ctr++; //!done
-        #ifndef ESP8266
-        uint8_t _interp_pct = map(_interp_ctr, 0, _interp_max, 0, 0xff); //use 8 bit math tricks
-        #endif
-        for(int i = 0; i < NUMCHANNELS; i++){
-            if(done()) { //interpolation done
-                _state[i] = _next[i]; //clamp state to expected final value
-            }else{
-                #ifdef ESP8266
-                _state[i] = ((_prev[i] * (_interp_max - _interp_ctr)) + (_next[i] * _interp_ctr)) / _interp_max; //use 32 bit math
-                #else
-                //use 8 bit math
-                //Interpolation is (A*(255-x)+B*x)/255. It requires only 8x8 multiplication, and a final division by 255,
-                //which can be approximated by simply taking the high byte of the sum.
-                _state[i] = ((_prev[i] * (uint16_t) (0xff-_interp_pct)) + (_next[i] * (uint16_t) _interp_pct)) >> 8;
-                #endif
-            }
+        this->tick();
+    }
+    #endif
+}
 
-            //refresh output:
-            if(_power) {
-                uint16_t gval = gamma(_state[i]);
-                _pwm.setPWM(i, 0, gval);
-            } else {
-                _pwm.setPWM(i, 0, 0);
-            }
+void LedControllerClass::tick() {
+    if(_interp_ctr < _interp_max) _interp_ctr++; //!done
+    #ifndef ESP8266
+    uint8_t _interp_pct = map(_interp_ctr, 0, _interp_max, 0, 0xff); //use 8 bit math tricks
+    #endif
+    for(int i = 0; i < NUMCHANNELS; i++){
+        if(done()) { //interpolation done
+            _state[i] = _next[i]; //clamp state to expected final value
+        }else{
+            #ifdef ESP8266
+            _state[i] = ((_prev[i] * (_interp_max - _interp_ctr)) + (_next[i] * _interp_ctr)) / _interp_max; //use 32 bit math
+            #else
+            //use 8 bit math
+            //Interpolation is (A*(255-x)+B*x)/255. It requires only 8x8 multiplication, and a final division by 255,
+            //which can be approximated by simply taking the high byte of the sum.
+            _state[i] = ((_prev[i] * (uint16_t) (0xff-_interp_pct)) + (_next[i] * (uint16_t) _interp_pct)) >> 8;
+            #endif
+        }
+
+        //refresh output:
+        if(_power) {
+            uint16_t gval = gamma(_state[i]);
+            _pwm.setPWM(i, 0, gval);
+        } else {
+            _pwm.setPWM(i, 0, 0);
         }
     }
 }
@@ -115,3 +126,9 @@ void LedControllerClass::reset() {
 
 //see extern def in header
 LedControllerClass LedController;
+
+#ifdef TICKER_H
+void _LedController_tick_cb(){
+  LedController.tick();
+}
+#endif
