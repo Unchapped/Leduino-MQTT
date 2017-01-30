@@ -18,8 +18,14 @@
 
 /* MQTT Topics associated with this node
 leduino/ID/power //set 1 or 0 for off/on
-leduino/ID/queue //enqueue a keyframe Expects "[delay(float)]:channel 0 [int], channel 1 [int], ..."
 leduino/ID/channel/INDEX //Instantly set a Channel value 0-255
+
+
+TODO: Change float to (ms, uint32 (little endian))
+leduino/ID/queue //enqueue a keyframe (human readable) Expects "[delay(float)]:channel 0 [int], channel 1 [int], ..."
+
+TODO:
+leduino/ID/binqueue //enqueue a sparce binary keyframe, Expects "[delay(ms, uint32 (little endian))][chid(char)val(char)][chid(char)val(char)]..."
 
 publishes:
 leduino/ID/status //refresh at 2 hz, 0-255 uint8[16] array
