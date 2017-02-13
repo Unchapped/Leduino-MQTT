@@ -40,9 +40,6 @@ LedControllerClass::LedControllerClass(uint8_t addr) : _rate(LED_REFRESH_MILLIS)
 #endif
 
 void LedControllerClass::init() {
-    #ifdef TWBR
-    TWBR = 12; // set I2C to 400KHz
-    #endif
     _pwm.begin();
     reset();
 

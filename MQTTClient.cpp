@@ -73,7 +73,7 @@ void MQTTClientClass::_callback(char* topic, byte* payload, unsigned int length)
   //strip the first character off the topic name, since I don't currently need the rest
   char topic_opt = topic[11]; // 11 = omit 'leduino/ID/'
 
-  if(topic_opt = 'q'){
+  if(topic_opt == 'q'){
     //expects [delay(cs, uint32 (little endian))][chid(char)val(char)][chid(char)val(char)]...
     DelayCS delay = *((DelayCS*) payload);
     unsigned int offset = sizeof(DelayCS);
@@ -82,8 +82,7 @@ void MQTTClientClass::_callback(char* topic, byte* payload, unsigned int length)
       LedValue value = *((LedValue*) payload + offset++);
       LedController.queueChannel(channel, value, delay); //queue up a new value for a single Channel
     }
-  }
-  if(topic_opt = 'p'){ //set power off/on
+  } else if(topic_opt == 'p'){ //set power off/on
     LedController.power(payload[0] == '1'); //faster than atoi()
   }
 }
