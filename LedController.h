@@ -13,24 +13,26 @@
 #endif
 
 
-//interpolation refresh rate is 64Hz
+//interpolation refresh rate is 100Hz
+//Counter values are 1 centisecond
 //interpolation counter values are uint32
-//with fixed point secs at << 6
-//max interpolation time is 194 days
-#define REFRESH_HERTZ 100
-#define REFRESH_MILLIS 10
-typedef uint32_t RefreshCtr;
+//max delay is like 497 days, but 16 bit values are too small, and 24 bit is just weird.
+#define LED_REFRESH_HERTZ 100
+#define LED_REFRESH_MILLIS 10
 
-//keyframe resolution is the same as interpolation rate
-typedef uint32_t KfDelay;
+//Need to try the maximum frequency for this, let's start at 1 KHz.
+#define LED_PWM_FREQ 1000
+
+//Typdedef for Delays in centiseconds
+typedef uint32_t DelayCS;
 
 //Channels are currently 8 bit (24-bit color) values
-#define NUMCHANNELS 16
+#define LED_NUMCHANNELS 16
 typedef uint8_t Channel;
 
 struct Keyframe{
-    KfDelay delay; //how long to fade in this keyframe see KEYFRAME_LSHIFT
-    Channel channel[NUMCHANNELS];
+    DelayCS delay; //how long to fade in this keyframe see KEYFRAME_LSHIFT
+    Channel channel[LED_NUMCHANNELS];
 };
 
 
@@ -44,25 +46,26 @@ class LedControllerClass{
 
     //State variables
     bool _power;
-    Channel _state[NUMCHANNELS];
+    Channel _state[LED_NUMCHANNELS];
 
     //interpolation variables
-    RefreshCtr _interp_ctr, _interp_max; //synchronous cycle marker
-    Channel _next[NUMCHANNELS];
-    Channel _prev[NUMCHANNELS];
+    DelayCS _interp_ctr[LED_NUMCHANNELS]; //per-channel interpolation counter
+    DelayCS _interp_max[LED_NUMCHANNELS]; //per-channel interpolation target
+    Channel _next[LED_NUMCHANNELS];
+    Channel _prev[LED_NUMCHANNELS];
 
     public:
     LedControllerClass(uint8_t addr = 0x40);
     void init();
     void reset();
-    void power(bool pwr);
-    bool power(); //read power state
+    void power(bool pwr); //set power state
+    bool power(); //get power state
     void poll(); //use this in the default arduino loop();
     void tick(); //use this if calling from the ESP8266 Scheduler
-    void queueKeyframe(Keyframe &kf);
-    void setChannel(uint8_t index, Channel value);
+    void queueChannel(uint8_t index, Channel value, DelayCS delay); //queue up a new value for a single channel
+    void setChannel(uint8_t index, Channel value); //instantly set a value for a new channel
+    void queueKeyframe(Keyframe &kf); //queue up a new value for all channels
     Channel getState(uint8_t index);
-    bool done();
 };
 
 extern LedControllerClass LedController;

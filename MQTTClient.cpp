@@ -42,11 +42,11 @@ static void _parse_keyframe(char * message, unsigned int length){
       char * token = message;
       size_t len = _tokenize_in_place(token, ':');
       float f_delay = atof(token);
-      _kfBuf.delay = f_delay * REFRESH_HERTZ; //convert to ticks, implicit cast to uint32_t
+      _kfBuf.delay = f_delay * LED_REFRESH_HERTZ; //convert to ticks, implicit cast to uint32_t
       token += len + 1; //next chunk will be past the null    
       //parse channels
       int ch_id = 0;
-      while (ch_id < NUMCHANNELS){
+      while (ch_id < LED_NUMCHANNELS){
         len = _tokenize_in_place(token, ',');
         if(len != 0){
           _kfBuf.channel[ch_id++] = atoi(token);
@@ -142,10 +142,10 @@ void MQTTClientClass::poll(){
 
 void MQTTClientClass::report_status(){
   sprintf(_topic_buffer, "%s", "status");
-  uint8_t buf_len = NUMCHANNELS * 4;
+  uint8_t buf_len = LED_NUMCHANNELS * 4;
   char buffer[buf_len];
   char * bPtr = buffer;
-  for(int i = 0; i < NUMCHANNELS; i++){
+  for(int i = 0; i < LED_NUMCHANNELS; i++){
     bPtr += sprintf ( bPtr, "%03u,", LedController.getState(i));
   }
   buffer[buf_len - 1] = 0; //null terminate the last comma

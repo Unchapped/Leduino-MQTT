@@ -36,7 +36,7 @@ inline uint16_t gamma(uint8_t val) {return pgm_read_word(&gamma_16[val]);}
 static void _LedController_tick_cb();
 LedControllerClass::LedControllerClass(uint8_t addr) : _pwm(addr), _power(true) {};
 #else
-LedControllerClass::LedControllerClass(uint8_t addr) : _rate(REFRESH_MILLIS), _pwm(addr), _power(true) {};
+LedControllerClass::LedControllerClass(uint8_t addr) : _rate(LED_REFRESH_MILLIS), _pwm(addr), _power(true) {};
 #endif
 
 void LedControllerClass::init() {
@@ -47,28 +47,41 @@ void LedControllerClass::init() {
     reset();
 
     #ifdef TICKER_H
-    _ticker.attach_ms(REFRESH_MILLIS, _LedController_tick_cb);
+    _ticker.attach_ms(LED_REFRESH_MILLIS, _LedController_tick_cb);
     #endif
 }
 
-void LedControllerClass::queueKeyframe(Keyframe &kf) {
-    for(int i = 0; i < NUMCHANNELS; i++){
-        if(kf.delay) { //non-instant update, set up interpolation from current point
-            _prev[i] = _state[i];
-            _next[i] = kf.channel[i];
-            _interp_ctr = 0;
-            _interp_max = kf.delay;
-        } else {
-          _interp_ctr = _interp_max = 0; //disable interpolation
-          _state[i] = _next[i] = kf.channel[i];
-        }
+void LedControllerClass::reset() {
+    _pwm.reset();
+    _pwm.setPWMFreq(LED_PWM_FREQ);
+    for(uint8_t i = 0; i < LED_NUMCHANNELS; i++){
+        _state[i] = 0; //turn all channels off
+        _interp_max[i] = _interp_ctr[i] = 0; //stop interpolation
+    }
+}
+
+void LedControllerClass::queueChannel(uint8_t index, Channel value, DelayCS delay) {
+    if(delay) { //non-instant update, set up interpolation from current point
+        _prev[index] = _state[index];
+        _next[index] = value;
+        _interp_ctr[index] = 0;
+        _interp_max[index] = delay;
+    } else {
+      _interp_ctr[index] = _interp_max[index] = 0; //disable interpolation
+      _state[index] = _next[index] = value;
     }   
 }
 
 //Sets one channel immediately, while allowing all others to continue interpolating
 void LedControllerClass::setChannel(uint8_t index, Channel value){
-  if(index >= NUMCHANNELS) return; //overflow
-  _prev[index] = _state[index] = _next[index] = value;
+  queueChannel(index, value, 0);
+}
+
+//queue up a new value for all channels
+void LedControllerClass::queueKeyframe(Keyframe &kf) {
+    for(int i = 0; i < LED_NUMCHANNELS; i++){
+        queueChannel(i, kf.channel[i], kf.delay);
+    }   
 }
 
 Channel LedControllerClass::getState(uint8_t index){
@@ -86,22 +99,12 @@ void LedControllerClass::poll() {
 }
 
 void LedControllerClass::tick() {
-    if(_interp_ctr < _interp_max) _interp_ctr++; //!done
-    #ifndef ESP8266
-    uint8_t _interp_pct = map(_interp_ctr, 0, _interp_max, 0, 0xff); //use 8 bit math tricks
-    #endif
-    for(int i = 0; i < NUMCHANNELS; i++){
-        if(done()) { //interpolation done
+    for(int i = 0; i < LED_NUMCHANNELS; i++){
+        if(_interp_ctr[i] < _interp_max[i]) { // !done
+            _interp_ctr[i]++;
+            _state[i] = ((_prev[i] * (_interp_max[i] - _interp_ctr[i])) + (_next[i] * _interp_ctr[i])) / _interp_max[i]; 
+        }else{ //interpolation done
             _state[i] = _next[i]; //clamp state to expected final value
-        }else{
-            #ifdef ESP8266
-            _state[i] = ((_prev[i] * (_interp_max - _interp_ctr)) + (_next[i] * _interp_ctr)) / _interp_max; //use 32 bit math
-            #else
-            //use 8 bit math
-            //Interpolation is (A*(255-x)+B*x)/255. It requires only 8x8 multiplication, and a final division by 255,
-            //which can be approximated by simply taking the high byte of the sum.
-            _state[i] = ((_prev[i] * (uint16_t) (0xff-_interp_pct)) + (_next[i] * (uint16_t) _interp_pct)) >> 8;
-            #endif
         }
 
         //refresh output:
@@ -114,25 +117,12 @@ void LedControllerClass::tick() {
     }
 }
 
-bool LedControllerClass::done() {
-    return (_interp_ctr >= _interp_max);
-}
-
 void LedControllerClass::power(bool pwr) {
     _power = pwr;
 }
 
 bool LedControllerClass::power() {
     return _power;
-}
-
-void LedControllerClass::reset() {
-    _pwm.reset();
-    _pwm.setPWMFreq(120);
-    for(uint8_t i = 0; i < NUMCHANNELS; i++){
-        _state[i] = 0;
-    }
-    _interp_max = _interp_ctr = 0; //stop interpolation
 }
 
 //see extern def in header
