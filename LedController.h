@@ -28,13 +28,7 @@ typedef uint32_t DelayCS;
 
 //Channels are currently 8 bit (24-bit color) values
 #define LED_NUMCHANNELS 16
-typedef uint8_t Channel;
-
-struct Keyframe{
-    DelayCS delay; //how long to fade in this keyframe see KEYFRAME_LSHIFT
-    Channel channel[LED_NUMCHANNELS];
-};
-
+typedef uint8_t LedValue;
 
 class LedControllerClass{
     #ifdef TICKER_H
@@ -46,13 +40,13 @@ class LedControllerClass{
 
     //State variables
     bool _power;
-    Channel _state[LED_NUMCHANNELS];
+    LedValue _state[LED_NUMCHANNELS];
 
     //interpolation variables
     DelayCS _interp_ctr[LED_NUMCHANNELS]; //per-channel interpolation counter
-    DelayCS _interp_max[LED_NUMCHANNELS]; //per-channel interpolation target
-    Channel _next[LED_NUMCHANNELS];
-    Channel _prev[LED_NUMCHANNELS];
+    DelayCS _interp_max[LED_NUMCHANNELS]; //per-Channel interpolation target
+    LedValue _next[LED_NUMCHANNELS];
+    LedValue _prev[LED_NUMCHANNELS];
 
     public:
     LedControllerClass(uint8_t addr = 0x40);
@@ -62,10 +56,10 @@ class LedControllerClass{
     bool power(); //get power state
     void poll(); //use this in the default arduino loop();
     void tick(); //use this if calling from the ESP8266 Scheduler
-    void queueChannel(uint8_t index, Channel value, DelayCS delay); //queue up a new value for a single channel
-    void setChannel(uint8_t index, Channel value); //instantly set a value for a new channel
-    void queueKeyframe(Keyframe &kf); //queue up a new value for all channels
-    Channel getState(uint8_t index);
+    void queueChannel(uint8_t index, LedValue value, DelayCS delay); //queue up a new value for a single Channel
+    LedValue getState(uint8_t index);
+    const LedValue* getState();
+    bool done(uint8_t index); //returns true if a given Channel is done interpolating
 };
 
 extern LedControllerClass LedController;

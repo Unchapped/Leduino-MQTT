@@ -18,32 +18,17 @@
 #include "NetworkConfig.h"
 #include "MQTTClient.h"
 
-
-
-
-Keyframe kfBuf;
-
 void setup() {
   #ifdef ESP8266
     Wire.begin(SDA_PIN, SCL_PIN);
   #endif
   LedController.init();
-  MQTTClient.init();
 
-  /* DEBUG: turn on a channel for debugging. * /
-  kfBuf.delay = REFRESH_HERTZ;
-  kfBuf.channel[0] = 255;
-  LedController.queueKeyframe(kfBuf);
-  */
+  //TODO: set the id frem ESP.getchipID?
+  MQTTClient.init(0);
 }
 
 void loop() {
   LedController.poll();
-  /* DEBUG: Flash a channel at 1 Hz. * /
-  if (LedController.done()){
-    kfBuf.channel[0] = 255 - kfBuf.channel[0];
-    LedController.queueKeyframe(kfBuf);
-  }
-  */
   MQTTClient.poll();
 }

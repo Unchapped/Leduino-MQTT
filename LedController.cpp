@@ -55,12 +55,12 @@ void LedControllerClass::reset() {
     _pwm.reset();
     _pwm.setPWMFreq(LED_PWM_FREQ);
     for(uint8_t i = 0; i < LED_NUMCHANNELS; i++){
-        _state[i] = 0; //turn all channels off
+        _state[i] = 0; //turn all Channels off
         _interp_max[i] = _interp_ctr[i] = 0; //stop interpolation
     }
 }
 
-void LedControllerClass::queueChannel(uint8_t index, Channel value, DelayCS delay) {
+void LedControllerClass::queueChannel(uint8_t index, LedValue value, DelayCS delay) {
     if(delay) { //non-instant update, set up interpolation from current point
         _prev[index] = _state[index];
         _next[index] = value;
@@ -72,20 +72,16 @@ void LedControllerClass::queueChannel(uint8_t index, Channel value, DelayCS dela
     }   
 }
 
-//Sets one channel immediately, while allowing all others to continue interpolating
-void LedControllerClass::setChannel(uint8_t index, Channel value){
-  queueChannel(index, value, 0);
-}
-
-//queue up a new value for all channels
-void LedControllerClass::queueKeyframe(Keyframe &kf) {
-    for(int i = 0; i < LED_NUMCHANNELS; i++){
-        queueChannel(i, kf.channel[i], kf.delay);
-    }   
-}
-
-Channel LedControllerClass::getState(uint8_t index){
+LedValue LedControllerClass::getState(uint8_t index){
   return _state[index];
+}
+
+const LedValue* LedControllerClass::getState(){
+  return _state;
+}
+
+bool LedControllerClass::done(uint8_t index) {
+    return (_interp_ctr[index] >= _interp_max[index]);
 }
 
 void LedControllerClass::poll() {
