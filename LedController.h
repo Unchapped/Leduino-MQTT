@@ -1,9 +1,19 @@
+//TODO: figure out how to reference Adafruit legal for copied code.
+
 #ifndef LedController_H
 #define LedController_H
 
 #include <Arduino.h>
+
+//Copied from Adafruit_PWMServoDriver.h
 #include <Wire.h>
-#include <Adafruit_PWMServoDriver.h>
+#if defined(__AVR__)
+ #define WIRE Wire
+#elif defined(CORE_TEENSY) // Teensy boards
+ #define WIRE Wire
+#else // Arduino Due
+ #define WIRE Wire1
+#endif
 
 //Use the ESP8266 scheduler if available.
 #ifdef ESP8266
@@ -20,15 +30,21 @@
 #define LED_REFRESH_HERTZ 100
 #define LED_REFRESH_MILLIS 10
 
-//Need to try the maximum frequency for this, let's start at 1 KHz.
-#define LED_PWM_FREQ 1000
-
 //Typdedef for Delays in centiseconds
 typedef uint32_t DelayCS;
 
 //Channels are currently 8 bit (24-bit color) values
-#define LED_NUMCHANNELS 16
 typedef uint8_t LedValue;
+
+//Static Channel array sizes
+//The range configurable on my shields it 0x40 - 0x4f
+//This library assumes you always have consecutive boards on one bus, starting at 0x40 and counting up.
+#define LED_NUMSHIELDS 16
+#define LED_CHANNELS_PER_SHIELD 16
+#define LED_MAXCHANNELS 256
+
+//PWM Base address from Adafruit
+#define LED_PWM_ADDR 0x40
 
 class LedControllerClass{
     #ifdef TICKER_H
@@ -36,21 +52,25 @@ class LedControllerClass{
     #else
     FancyDelay _rate;
     #endif
-    Adafruit_PWMServoDriver _pwm; 
-
+    
     //State variables
     bool _power;
-    LedValue _state[LED_NUMCHANNELS];
+    LedValue _state[LED_MAXCHANNELS];
 
     //interpolation variables
-    DelayCS _interp_ctr[LED_NUMCHANNELS]; //per-channel interpolation counter
-    DelayCS _interp_max[LED_NUMCHANNELS]; //per-Channel interpolation target
-    LedValue _next[LED_NUMCHANNELS];
-    LedValue _prev[LED_NUMCHANNELS];
+    DelayCS _interp_ctr[LED_MAXCHANNELS]; //per-channel interpolation counter
+    DelayCS _interp_max[LED_MAXCHANNELS]; //per-Channel interpolation target
+    LedValue _next[LED_MAXCHANNELS];
+    LedValue _prev[LED_MAXCHANNELS];
+
+    //How many actual channels are connected?
+    uint8_t _num_connected_shields;
+    uint16_t _num_connected_channels;
 
     public:
-    LedControllerClass(uint8_t addr = 0x40);
+    LedControllerClass();
     void init();
+    uint16_t numChannels(); //return the number of connected channels (Max = 256).
     void reset();
     void power(bool pwr); //set power state
     bool power(); //get power state

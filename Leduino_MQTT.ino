@@ -15,8 +15,9 @@
 #endif
 
 #include "LedController.h"
-#include "NetworkConfig.h"
-#include "MQTTClient.h"
+//#include "NetworkConfig.h"
+//#include "MQTTClient.h"
+#include "SerialClient.h"
 
 void setup() {
   #ifdef ESP8266
@@ -25,10 +26,14 @@ void setup() {
   LedController.init();
 
   //TODO: set the id frem ESP.getchipID?
-  MQTTClient.init(0);
+  //MQTTClient.init(0);
+
+  Serial.begin(9600);
+  SerialClient.init(Serial);
 }
 
 void loop() {
   LedController.poll();
-  MQTTClient.poll();
+  //MQTTClient.poll();
+  SerialClient.poll();
 }

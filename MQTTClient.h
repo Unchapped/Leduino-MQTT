@@ -62,7 +62,6 @@ class MQTTClientClass{
     MQTTClientClass();
     void init(uint8_t id = 0);
     void poll(); //use this in the default arduino loop();
-    void tick(); //use this if calling from the ESP8266 Scheduler
     void report_status(); //publish our state
     void _callback(char* topic, byte* payload, unsigned int length);
 };

@@ -100,7 +100,7 @@ void MQTTClientClass::poll(){
 void MQTTClientClass::report_status(){
   sprintf(_topic_buffer, "%s", "status");
   //publish in binary and let the wee pythonic bastards figure it oot!!!
-  _client.publish(_topic_buffer_secret, LedController.getState(), LED_NUMCHANNELS, false);
+  _client.publish(_topic_buffer_secret, LedController.getState(), LedController.numChannels(), false);
 }
 
 //Callback redirect functions
