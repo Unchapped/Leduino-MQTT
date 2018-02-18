@@ -13,7 +13,7 @@
 #define SERIAL_STATUS_MILLIS 1000
 
 class SerialClientClass{
-    const Stream * _port;
+    Stream * _port;
 
     #ifdef TICKER_H
     Ticker _status_ticker;
@@ -23,7 +23,7 @@ class SerialClientClass{
 
     public:
     SerialClientClass();
-    void init(const Stream * port);
+    void init(Stream * port);
     void poll(); //use this in the default arduino loop();
     void report_status(); //publish our state
 };

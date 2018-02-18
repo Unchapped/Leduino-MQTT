@@ -12,7 +12,7 @@ SerialClientClass::SerialClientClass() {}
 SerialClientClass::SerialClientClass() : _status_rate(SERIAL_STATUS_MILLIS) {}
 #endif
 
-void SerialClientClass::init(const Stream * port){
+void SerialClientClass::init(Stream * port){
   _port = port;
 
   //start the ticker running
