@@ -1,31 +1,23 @@
 #ifndef SERIALCLIENT_H
 #define SERIALCLIENT_H
 
+#include <Arduino.h>
 #include "LedController.h"
 
-#ifdef ESP8266
-  #include <Ticker.h>
-#else
-  #include <FancyDelay.h>
-#endif
+//This controller client is basically useless on the ESP8266, so no Ticker version exists.
+#include <FancyDelay.h>
 
 //How often to dump channel settings to the serial port
-#define SERIAL_STATUS_MILLIS 1000
+#define SERIAL_STATUS_MILLIS 500
 
 class SerialClientClass{
-    Stream * _port;
-
-    #ifdef TICKER_H
-    Ticker _status_ticker;
-    #else
+    HardwareSerial & _port;
     FancyDelay _status_rate; //1 Hz report rate
-    #endif
 
     public:
-    SerialClientClass();
-    void init(Stream * port);
+    SerialClientClass(HardwareSerial & port);
+    void init(unsigned int speed = 9600);
     void poll(); //use this in the default arduino loop();
-    void report_status(); //publish our state
 };
 
 extern SerialClientClass SerialClient;

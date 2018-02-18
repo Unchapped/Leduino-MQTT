@@ -101,11 +101,9 @@ void LedControllerClass::init() {
     //initialize all shields
     WIRE.begin();
     for (uint8_t i = 0; i < LED_NUMSHIELDS; i++) {
-        if(true){ //TODO: check for live shield
+        if(i < 1){ //TODO: check for live shield
             _num_connected_shields++;
             _num_connected_channels += LED_CHANNELS_PER_SHIELD;
-
-
         } else break;
     }
     reset();
@@ -124,14 +122,14 @@ void LedControllerClass::reset() {
         //default prescale is 0x1E (~200 Hz) try this for now)
         //minimum prescale is 0x03 (1526 Hz)
         //Copied from adafriuit setPWMFreq;
-        /* uint8_t prescale = 5 //(~1kHz)
+        uint8_t prescale = 5; //(~1kHz)
         uint8_t oldmode = _i2c_read8(i, PCA9685_MODE1);
         uint8_t newmode = (oldmode&0x7F) | 0x10; // sleep
         _i2c_write8(i, PCA9685_MODE1, newmode); // go to sleep
         _i2c_write8(i, PCA9685_PRESCALE, prescale); // set the prescaler
         _i2c_write8(i, PCA9685_MODE1, oldmode);
         delay(5);
-        _i2c_write8(i, PCA9685_MODE1, oldmode | 0xa1);  //  This sets the MODE1 register to turn on auto increment. */
+        _i2c_write8(i, PCA9685_MODE1, oldmode | 0xa1);  //  This sets the MODE1 register to turn on auto increment.
     }
     for(uint8_t i = 0; i < _num_connected_channels; i++){
         _state[i] = 0; //turn all Channels off
